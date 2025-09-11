@@ -1,0 +1,15 @@
+pandas==2.2.2
+numpy==2.0.1
+duckdb==1.1.0
+pyarrow==17.0.0
+prefect==2.19.4
+sqlalchemy==2.0.32
+
+# dbt core + DuckDB adapter
+dbt-core==1.8.4
+dbt-duckdb==1.8.2
+
+# Developer tools
+tqdm==4.66.4
+pytest==8.3.2
+flake8==7.1.1
