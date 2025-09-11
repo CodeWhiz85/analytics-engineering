@@ -1,0 +1,216 @@
+# member-insights-pipeline
+**End-to-end analytics engineering demo for "Member Insights"** — simulates streaming activity logs, models them with **dbt**, orchestrates pipelines with **Prefect** (Airflow example included), enforces **data quality** with tests, and exposes **self-serve insights** for stakeholders. Designed to mirror the responsibilities of an **Analytics Engineer 5 – Member Insights Engineering**.
+
+<p align="left">
+  <img alt="build-status" src="https://img.shields.io/badge/CI-passing-brightgreen?style=flat" />
+  <img alt="dbt" src="https://img.shields.io/badge/dbt-1.8-orange" />
+  <img alt="duckdb" src="https://img.shields.io/badge/DuckDB-local%20warehouse-blue" />
+  <img alt="prefect" src="https://img.shields.io/badge/Prefect-2.x-3A76F0" />
+</p>
+
+---
+
+## What this demonstrates
+- Pipelines: ingestion → staging → marts → metrics (dbt) orchestrated via Prefect.
+- Data Quality: schema + relationship tests, stepwise sanity checks, anomaly flags.
+- Member Insights: DAU/MAU, minutes watched, completion rate, search trends, device & region mix.
+- Experiment/Logging Readiness: clean join keys, event timestamps, and coverage checks suitable for experimentation tables and forensic investigations.
+- Engineering Discipline: reproducible local run, CI on push, clear repo structure, typed Python, linting.
+
+Why DuckDB? Local, zero-infra, and fast. Swap adapters to Postgres/BigQuery/Snowflake in minutes (instructions below).
+
+---
+
+## Architecture
+```
+Simulated Logs → raw.* (CSV) ──► dbt staging.* views ──► dbt marts.* tables ──► metrics & dashboards
+             (Python)             (validation tests)        (facts/dims/KPIs)         (SQL + notebooks)
+```
+
+Diagram: `architecture.png` (add later) — shows flow, tests, and orchestration touchpoints (Prefect/Airflow).
+
+---
+
+## Quickstart (fully local)
+```bash
+# 1) Clone & enter
+git clone https://github.com/<you>/member-insights-pipeline.git
+cd member-insights-pipeline
+
+# 2) Python env
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+
+# 3) Generate sample data (30 days, ~20k members, 500 titles)
+python data_gen/simulate_events.py --days 30 --members 20000 --titles 500
+
+# 4) Run the pipeline (loads raw → dbt build → tests)
+python orchestration/flow.py
+
+# 5) Peek at results (DuckDB)
+python - <<'PY'
+import duckdb
+con = duckdb.connect('warehouse/duckdb/database.duckdb')
+print(con.sql('select * from marts.engagement_metrics order by event_date desc limit 10'))
+PY
+```
+
+Profiles: The repo includes `dbt_project/profiles_example.yml`. Copy it to `~/.dbt/profiles.yml` or set `export DBT_PROFILES_DIR=dbt_project`.
+
+---
+
+## Repository layout
+```
+member-insights-pipeline/
+├─ README.md                     # This file
+├─ architecture.png              # (optional) simple data-flow diagram
+├─ requirements.txt              # Python deps (dbt-duckdb, Prefect, pandas, etc.)
+├─ data_gen/
+│  └─ simulate_events.py         # Streaming-style log simulator
+├─ data/
+│  ├─ raw/                       # Generated CSVs
+│  └─ processed/
+├─ warehouse/
+│  └─ duckdb/database.duckdb     # Local warehouse (gitignored)
+├─ dbt_project/
+│  ├─ dbt_project.yml            # dbt config
+│  ├─ profiles_example.yml       # local DuckDB profile
+│  ├─ models/
+│  │  ├─ staging/                # stg_members, stg_titles, stg_play_events, stg_search_events
+│  │  └─ marts/                  # dim_members, dim_titles, fct_plays, fct_member_day_engagement, engagement_metrics
+│  └─ seeds/                     # small lookups (e.g., regions)
+├─ orchestration/
+│  ├─ flow.py                    # Prefect flow: load → dbt build → sanity checks
+│  └─ airflow/dags/member_insights_dag.py   # Optional Airflow example
+├─ analysis/
+│  ├─ notebooks/                 # Jupyter (exploratory insights)
+│  └─ sql/                       # Reusable stakeholder queries
+└─ ci/
+   └─ github-actions.yml         # CI: simulate → run pipeline → dbt tests → lint
+```
+
+---
+
+## Data model & quality gates (dbt)
+- Staging: type casting, timestamp normalization, referential integrity.
+- Marts:
+  - `dim_members`, `dim_titles`
+  - `fct_plays` (minutes watched, completions, sessions)
+  - `fct_member_day_engagement` (joined with searches)
+  - `engagement_metrics` (DAU, minutes, completions, avg minutes per active)
+- Tests: `not_null`, `unique`, `relationships`, `accepted_values` (see YAML files).
+- Semantic layer: metrics materialized for BI tools.
+
+---
+
+## Orchestration (Prefect default, Airflow optional)
+Prefect: `orchestration/flow.py` runs three tasks:
+1) Load CSVs to `raw.*`
+2) `dbt build` (run + test)
+3) Sanity check: assert non-empty KPI tables
+
+Airflow: `orchestration/airflow/dags/member_insights_dag.py` shows a daily DAG that shells into dbt.
+
+---
+
+## Analysis & self-serve
+- Notebooks (`analysis/notebooks/`): example exploration of DAU, device mix, completion rate.
+- SQL (`analysis/sql/`): copy-paste queries for PMs/analysts.
+- Dashboards (optional): Point Metabase/Looker Studio at DuckDB or a cloud warehouse, and include screenshots in `docs/`.
+
+---
+
+## Tech stack
+- Warehouse: DuckDB (swap to Postgres/BigQuery/Snowflake as needed)
+- Transformation: dbt-core + dbt-duckdb
+- Orchestration: Prefect 2.x (Airflow example included)
+- Languages: SQL, Python (pandas, numpy)
+- CI: GitHub Actions
+
+---
+
+## Swapping to a cloud warehouse (5-minute guide)
+1. Install adapter (e.g., `pip install dbt-postgres`).
+2. Copy `profiles_example.yml` and change `type`, `host`, `user`, `schema`, etc.
+3. Re-run: `dbt build` — SQL is ANSI-friendly; minor tweaks may be needed for functions.
+
+---
+
+## Demo queries
+```sql
+-- Daily Active Members (last 14 days)
+select *
+from marts.engagement_metrics
+order by event_date desc
+limit 14;
+
+-- Device mix yesterday
+with y as (select max(event_date) d from marts.fct_member_day_engagement)
+select any_value(m.region) as region, e.member_id, e.event_date, e.sessions, e.minutes_watched
+from marts.fct_member_day_engagement e
+join marts.dim_members m using (member_id)
+where e.event_date = (select d from y);
+
+-- Top 10 titles by completions yesterday
+with y as (select max(event_date) d from marts.fct_member_day_engagement)
+select t.title_id, sum(p.completions) as completions
+from marts.fct_plays p
+join y on p.event_date = y.d
+join marts.dim_titles t using (title_id)
+group by 1
+order by completions desc
+limit 10;
+```
+
+---
+
+## Data anomalies & forensic hooks
+- Simulator can drop or skew events to mimic logging issues (e.g., missing `play` actions for a device cohort on a certain day).
+- Add alerts in Prefect or your BI layer when coverage or distributions drift.
+
+---
+
+## CI (GitHub Actions)
+On push/PR to `main`:
+1) Install deps
+2) Generate 7–14 days of data
+3) Run Prefect flow (load → dbt build → tests)
+4) Lint Python with flake8
+
+Badge at the top stays green when the whole pipeline is healthy.
+
+---
+
+## Mapping to the role
+- Develop & maintain pipelines → Prefect + dbt DAG, modular models
+- Compute & validate metrics → `engagement_metrics` + dbt tests
+- Bridge experimentation & analytics → clean event tables + joins ready for A/B
+- Forensic investigations → simulator anomalies + sanity checks
+- Explore member trends → notebooks/SQL + device/region/title views
+- Coach self-serve → BI-ready marts + documented queries
+
+---
+
+## Local development
+```bash
+# Run only dbt (after data is loaded)
+python -m dbt --project-dir dbt_project build
+
+# Recreate DuckDB from scratch
+rm -f warehouse/duckdb/database.duckdb
+python data_gen/simulate_events.py --days 7 --members 5000 --titles 200
+python orchestration/flow.py
+```
+
+---
+
+## Roadmap
+- Add experimentation schema (exposures, variants, metrics per cohort)
+- Real-time monitoring sketch with Kafka + DuckDB streaming (or Spark Structured Streaming)
+- dbt semantic layer metrics + exposures
+- Optional Superset/Metabase dashboards & screenshots
+
+---
+
+## License
+MIT — use and adapt freely.
