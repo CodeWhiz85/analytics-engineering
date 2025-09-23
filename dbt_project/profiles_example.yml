@@ -1,0 +1,7 @@
+member_insights_duckdb:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: warehouse/duckdb/database.duckdb
+      schema: staging
