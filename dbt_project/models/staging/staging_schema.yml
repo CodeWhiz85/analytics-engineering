@@ -1,0 +1,39 @@
+version: 2
+models:
+  - name: stg_members
+    columns:
+      - name: member_id
+        tests: [not_null, unique]
+      - name: region
+        tests:
+          - accepted_values:
+              values: [NA, LATAM, EMEA, APAC]
+  - name: stg_titles
+    columns:
+      - name: title_id
+        tests: [not_null, unique]
+      - name: runtime_minutes
+        tests: [not_null]
+  - name: stg_play_events
+    columns:
+      - name: member_id
+        tests:
+          - relationships:
+              to: ref('stg_members')
+              field: member_id
+      - name: title_id
+        tests:
+          - relationships:
+              to: ref('stg_titles')
+              field: title_id
+      - name: action
+        tests:
+          - accepted_values:
+              values: [play, pause, resume, stop, complete]
+  - name: stg_search_events
+    columns:
+      - name: member_id
+        tests:
+          - relationships:
+              to: ref('stg_members')
+              field: member_id
