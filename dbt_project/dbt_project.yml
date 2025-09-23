@@ -1,0 +1,16 @@
+name: "member_insights"
+version: "1.0.0"
+config-version: 2
+profile: "member_insights_duckdb"
+model-paths: ["models"]
+seed-paths: ["seeds"]
+
+models:
+  member_insights:
+    +materialized: table
+    staging:
+      +schema: staging
+      +materialized: view
+    marts:
+      +schema: marts
+      +materialized: table
