@@ -164,8 +164,10 @@ def simulate_search_events(days: int, members: pd.DataFrame, rng: np.random.Gene
                        "search_type" np.random.choice(SEARCH_TYPES, p=[0.85, 0.1, 0.05]),
                        "query": random.choice(qs),
                        
-                    }]
-
+                    })
+                       df = pd.DataFrame(rows)
+                       df["event_time"] = pd.to_datetime(df["event_time"])
+                       return df
 
 #def simulate_search_events(members: pd.DataFrame, days: int, rng: np.random.Generator) -> pd.DataFrame:
 #    vocab = ["love", "space", "war", "family", "crime", "nature", "comedy", "night", "fast", "sport"]
@@ -185,17 +187,17 @@ def simulate_search_events(days: int, members: pd.DataFrame, rng: np.random.Gene
 
 
 
-def apply_anomalies(df: pd.DataFrame, anomalies: List[Anomaly], rng: np.random.Generator) -> pd.DataFrame:
-    if not anomalies:
-        return df
-    out = df
-    for a in anomalies:
-        mask = pd.to_datetime(out["event_time"]).dt.date.eq(a.day)
-        if a.key == "device" and "device" in out.columns:
-            mask &= out["device"].eq(a.value)
-        drop_mask = (rng.random(out.shape[0]) < a.drop) & mask.to_numpy()
-        out = out.loc[~drop_mask].reset_index(drop=True)
-    return out
+#def apply_anomalies(df: pd.DataFrame, anomalies: List[Anomaly], rng: np.random.Generator) -> pd.DataFrame:
+#    if not anomalies:
+#        return df
+#    out = df
+#    for a in anomalies:
+#        mask = pd.to_datetime(out["event_time"]).dt.date.eq(a.day)
+#        if a.key == "device" and "device" in out.columns:
+#            mask &= out["device"].eq(a.value)
+#        drop_mask = (rng.random(out.shape[0]) < a.drop) & mask.to_numpy()
+#        out = out.loc[~drop_mask].reset_index(drop=True)
+#    return out
 
 def main(args: argparse.Namespace) -> None:
     out_raw = Path("data/raw")
@@ -229,5 +231,5 @@ if __name__ == "__main__":
     parser.add_argument("--members", type=int, default=5000)
     parser.add_argument("--titles", type=int, default=300)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--anomaly", action="append", help="e.g. 2025-08-15:device=tv:drop=0.5 (repeatable)")
+   # parser.add_argument("--anomaly", action="append", help="e.g. 2025-08-15:device=tv:drop=0.5 (repeatable)")
     main(parser.parse_args())
