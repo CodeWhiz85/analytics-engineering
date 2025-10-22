@@ -54,10 +54,18 @@ def load_raw_to_duckdb():
 
 @task
 def dbt_build():
-    env = dict(**os.environ)
-    env.setdefault("DBT_PROFILES_DIR", "dbt_project")
-    subprocess.check.call([sys.executable, "-m", "dbt", "--project-dir", "dbt_project", "deps"], env=env)
-    subprocess.check.call([sys.executable, "-m", "dbt", "--project-dir", "dbt_project", "build"], env=env)
+    env = os.environ.copy()
+    cmd = [
+        "dbt", "build",
+        "--project-dir", DBT_PROJECT_DIR,
+           "--profiles-dir", DBT_PROFILES_DIR
+           ]
+               subprocess.run(cmd, check=True, env=env)
+           
+    #   env = dict(**os.environ)
+    #   env.setdefault("DBT_PROFILES_DIR", "dbt_project")
+    #   subprocess.check.call([sys.executable, "-m", "dbt", "--project-dir", "dbt_project", "deps"], env=env)
+    #   subprocess.check.call([sys.executable, "-m", "dbt", "--project-dir", "dbt_project", "build"], env=env)
 
 @task
 def sanity_checks():
