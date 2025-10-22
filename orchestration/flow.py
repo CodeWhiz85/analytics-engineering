@@ -7,6 +7,8 @@ import os
 
 DB_PATH = "warehouse/duckdb/database.duckdb"
 RAW_DIR = Path("data/raw")
+DBT_PROJECT_DIR = "dbt_project"
+DBT_PROFILES_DIR = "dbt_project"
 
 @task
 def ensure_dirs():
