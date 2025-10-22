@@ -9,54 +9,71 @@ Generates four CSVs under data/raw:
 """
 from __future__ import annotations
 
-import argparse
-import random
-import uuid
-from dataclasses import dataclass
-from datetime import datetime, timedelta, date
+import argparse, uuid, random
 from pathlib import Path
-from typing import Dict, List
-
+from datetime import datetime, timedelta, date
 import numpy as np
 import pandas as pd
 
+#updated imports
+#import random
+#import uuid
+#from dataclasses import dataclass
+#from datetime import datetime, timedelta, date
+#from pathlib import Path
+#from typing import Dict, List
+
+#import numpy as np
+#import pandas as pd
+
 REGIONS = ["NA", "LATAM", "EMEA", "APAC"]
 REGION_P = [0.40, 0.20, 0.25, 0.15]
-
 DEVICES = ["tv", "mobile", "tablet", "desktop"]
-DEVICE_P = [0.50, 0.25, 0.15, 0.10]
-
+ACTIONS = ["play","pause", "resume", "stop", "complete"]
 SEARCH_TYPES = ["title", "genre", "actor"]
-GENRES = [
+
+# DEVICE_P = [0.50, 0.25, 0.15, 0.10]
+
+# GENRES = [
     "Drama", "Comedy", "Action", "Thriller", "Romance", "Sci-Fi",
     "Documentary", "Family", "Horror", "Animation", "Fantasy",
 ]
 
-@dataclass(frozen=True)
-class Anomaly:
-    day: date
-    key: str        # "device" or "region"
-    value: str
-    drop: float
 
-    @staticmethod
-    def parse(spec: str) -> "Anomaly":
-        # Example: 2025-08-15:device=tv:drop=0.5
-        dpart, kv, ddrop = spec.split(":")
-        k, v = kv.split("=")
-        _, frac = ddrop.split("=")
-        return Anomaly(
-            day=datetime.strptime(dpart, "%Y-%m-%d").date(),
-            key=k, value=v, drop=float(frac)
-        )
 
-def daterange(days: int, end: date | None = None):
-    end = end or datetime.utcnow().date()
-    start = end - timedelta(days=days)
-    cur = start
-    while cur < end:
-        yield cur
-        cur += timedelta(days=1)
+
+#@dataclass(frozen=True)
+#class Anomaly:
+#    day: date
+#    key: str        # "device" or "region"
+#    value: str
+#    drop: float
+
+#    @staticmethod
+#    def parse(spec: str) -> "Anomaly":
+#        # Example: 2025-08-15:device=tv:drop=0.5
+#       dpart, kv, ddrop = spec.split(":")
+#        k, v = kv.split("=")
+#        _, frac = ddrop.split("=")
+#        return Anomaly(
+#            day=datetime.strptime(dpart, "%Y-%m-%d").date(),
+#            key=k, value=v, drop=float(frac)
+#        )
+
+def daterange(start: date, end: date):
+    d = start
+    while d <= end:
+        yield d
+        d += timedelta(days=1)
+
+
+#def daterange(days: int, end: date | None = None):
+#    end = end or datetime.utcnow().date()
+#    start = end - timedelta(days=days)
+#    cur = start
+#    while cur < end:
+#        yield cur
+#        cur += timedelta(days=1)
 
 def weekend_lift(d: date) -> float:
     return 1.25 if d.weekday() >= 5 else 1.0
