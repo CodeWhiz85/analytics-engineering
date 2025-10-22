@@ -70,12 +70,24 @@ def dbt_build():
 @task
 def sanity_checks():
     con = duckdb.connect(DB_PATH)
+    
+    #confirm that marts tables exist and have rows
+    for t in ["marts.engagement_metrics", "marts.dim_members", "marts.dim_titles", "marts.fct_plays", "marts.fct_member_day_engagement"]:
+    
+    
     try:
-        rows = con.sql("SELECT count(*) FROM marts.engagement_metrics").fetchone()[0]
+        rows = con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
+    
+        #rows = con.sql("SELECT count(*) FROM marts.engagement_metrics").fetchone()[0]
+    
     except Exception as exc:
-        raise AssertionError("marts.engagement_metrics not found; dbt build likely failed") from exc
+    
+        raise AssertionError(f"{t} not found; dbt build likely failed") from exc
     if rows <= 0:
-        raise AssertionError("No rows in marts.engagement_metrics")
+                raise AssertionError(f"No Rows in {t}")
+       # raise AssertionError("marts.engagement_metrics not found; dbt build likely failed") from exc
+       # if rows <= 0:
+       # raise AssertionError("No rows in marts.engagement_metrics")
     con.close()
 
 @flow(name="member_insights_pipeline")
