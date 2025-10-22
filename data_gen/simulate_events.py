@@ -90,54 +90,100 @@ def simulate_members(n: int, rng: np.random.Generator) -> pd.DataFrame:
 def simulate_titles(n: int, rng: np.random.Generator) -> pd.DataFrame:
     return pd.DataFrame({
         "title_id": [str(uuid.uuid4()) for _ in range(n)],
-        "genre": rng.choice(GENRES, size=n),
-        "minutes": rng.integers(40, 150, size=n),
+        "genre": rng.choice(["Drama", "Comedy", "Doc", "Action", "Kids"], size=n),
+        "minutes": rng.integers(5, 140, size=n),
         "is_series": rng.choice([0, 1], size=n, p=[0.6, 0.4]),
     })
 
-def simulate_play_events(members: pd.DataFrame, titles: pd.DataFrame, days: int, rng: np.random.Generator) -> pd.DataFrame:
-    rows: List[Dict] = []
-    for day in daterange(days):
-        base_active = 0.12 * weekend_lift(day)
-        active_members = members.sample(frac=min(base_active, 0.9), random_state=(hash(day) % (2**32)))
-        for _, m in active_members.iterrows():
-            sessions = int(rng.integers(1, 4))
-            for _ in range(sessions):
-                t = titles.sample(1, random_state=int(rng.integers(1e9))).iloc[0]
-                session_minutes = int(rng.integers(5, min(180, int(t["minutes"]) + 30)))
-                actions = ["play"]
-                if rng.random() < 0.35:
-                    actions.append("pause")
-                if "pause" in actions and rng.random() < 0.85:
-                    actions.append("resume")
-                if session_minutes > int(t["minutes"]) * 0.85 and rng.random() < 0.9:
-                    actions.append("complete")
-                actions.append("stop")
-                for a in actions:
-                    rows.append({
-                        "event_time": datetime.combine(day, datetime.min.time()) + timedelta(minutes=int(rng.integers(0, 24 * 60))),
-                        "member_id": m["member_id"],
-                        "title_id": t["title_id"],
-                        "action": a,
-                        "minutes_watched": session_minutes if a in ("stop", "complete") else 0,
-                        "device": rng.choice(DEVICES, p=DEVICE_P),
-                    })
-    return pd.DataFrame(rows)
 
-def simulate_search_events(members: pd.DataFrame, days: int, rng: np.random.Generator) -> pd.DataFrame:
-    vocab = ["love", "space", "war", "family", "crime", "nature", "comedy", "night", "fast", "sport"]
-    rows: List[Dict] = []
-    for day in daterange(days):
-        active = members.sample(frac=0.20 * weekend_lift(day), random_state=((hash(day) + 7) % (2**32)))
-        for _, m in active.iterrows():
-            for _ in range(int(rng.integers(0, 3))):
-                rows.append({
-                    "event_time": datetime.combine(day, datetime.min.time()) + timedelta(minutes=int(rng.integers(0, 24 * 60))),
-                    "member_id": m["member_id"],
-                    "search_type": rng.choice(SEARCH_TYPES, p=[0.6, 0.3, 0.1]),
-                    "query": " ".join(rng.choice(vocab, size=int(rng.integers(1, 3)))).strip(),
-                })
-    return pd.DataFrame(rows)
+
+def simulate_play_events(members: pd.DataFrame, titles: pd.DataFrame, days: int, rng: np.random.Generator) -> pd.DataFrame:
+    start = (datetime.utcnow().date() - timedelta(days=days-1))
+    events = []
+    member_ids = members["member_id"].values
+    title_ids - titles["title_id"}.values
+                       for d in daterange(start,datetime.utcnow().date()):
+                       scale = ind(0.15*len(member_ids)*weekend_lift(d))
+                       for _ in range(scale):
+                        m = rng.choice(member_ids)
+                        t = rng.choce(title_ids)
+                        action_path = ["play"] + rng.choice([["complete"], ["stop"], ["pause", "resume" "complete", ]], p=[0.5, 0.2, 0.3])
+                        base_time = datetime.combine(d, datetime.min.time() + timedelta(minutes=int(rng.integers(0, 24*60))))
+                        minutes = int(rng.integers(1,60))
+                       device = rng.choice(DEVICES, p=[0.45, 0.35, 0.1, 0.1])
+                       for i, a in enumerate(action_path):
+                       events.append({
+                                     "event_time": (base_time + timedelta(minutes=i)).isoformat(sep=" "),
+                                     "member_id": m,
+                                     "title_id": t,
+                                     "action": a,
+                                     "minutes_watched": minutes if a in ("play", "resume", "complete") else 0,
+                                     "device": device,
+                
+                                })
+                       return pd.DataFrame(events)
+
+
+    #rows: List[Dict] = []
+    #for day in daterange(days):
+    #    base_active = 0.12 * weekend_lift(day)
+    #    active_members = members.sample(frac=min(base_active, 0.9), random_state=(hash(day) % (2**32)))
+    #    for _, m in active_members.iterrows():
+    #        sessions = int(rng.integers(1, 4))
+    #        for _ in range(sessions):
+    #            t = titles.sample(1, random_state=int(rng.integers(1e9))).iloc[0]
+    #            session_minutes = int(rng.integers(5, min(180, int(t["minutes"]) + 30)))
+    #            actions = ["play"]
+    #            if rng.random() < 0.35:
+    #                actions.append("pause")
+    #            if "pause" in actions and rng.random() < 0.85:
+    #                actions.append("resume")
+    #            if session_minutes > int(t["minutes"]) * 0.85 and rng.random() < 0.9:
+    #                actions.append("complete")
+    #            actions.append("stop")
+    #            for a in actions:
+    #                rows.append({
+    #                    "event_time": datetime.combine(day, datetime.min.time()) + timedelta(minutes=int(rng.integers(0, 24 * 60))),
+    #                    "member_id": m["member_id"],
+    #                    "title_id": t["title_id"],
+    #                    "action": a,
+    #                    "minutes_watched": session_minutes if a in ("stop", "complete") else 0,
+    #                    "device": rng.choice(DEVICES, p=DEVICE_P),
+    #                })
+    # return pd.DataFrame(rows)
+
+
+def simulate_search_events(days: int, members: pd.DataFrame, rng: np.random.Generator) -> pf.DataFrame:
+                       start = (datetime.utcnow().date() - timedelta(days=days-1))
+                       rows = []
+                       qs = ["motor racing", "cooking", "space", "cat videos", "fitness", "history", "news"]
+                       for d in daterange(start, datetime.utcnow().date())
+                       for _ in range(int(0.88 * len(members) * weekend_lift)):
+                       "event_time": datetime.combine(d, datetime.min.time()+timedelta(minutes=int(np.random.randint(0, 24*60)))),
+                       "member_id": members["member_id"].sample(1).values[0],
+                       "search_type" np.random.choice(SEARCH_TYPES, p=[0.85, 0.1, 0.05]),
+                       "query": random.choice(qs),
+                       
+                    }]
+
+
+#def simulate_search_events(members: pd.DataFrame, days: int, rng: np.random.Generator) -> pd.DataFrame:
+#    vocab = ["love", "space", "war", "family", "crime", "nature", "comedy", "night", "fast", "sport"]
+#    rows: List[Dict] = []
+#    for day in daterange(days):
+#        active = members.sample(frac=0.20 * weekend_lift(day), random_state=((hash(day) + 7) % (2**32)))
+#        for _, m in active.iterrows():
+#            for _ in range(int(rng.integers(0, 3))):
+#                rows.append({
+#                    "event_time": datetime.combine(day, datetime.min.time()) + timedelta(minutes=int(rng.integers(0, 24 * 60))),
+#                    "member_id": m["member_id"],
+#                    "search_type": rng.choice(SEARCH_TYPES, p=[0.6, 0.3, 0.1]),
+#                    "query": " ".join(rng.choice(vocab, size=int(rng.integers(1, 3)))).strip(),
+#               })
+#    return pd.DataFrame(rows)
+
+
+
 
 def apply_anomalies(df: pd.DataFrame, anomalies: List[Anomaly], rng: np.random.Generator) -> pd.DataFrame:
     if not anomalies:
