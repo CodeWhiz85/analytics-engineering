@@ -37,18 +37,20 @@ def load_raw_to_duckdb():
     con.execute(f"CREAT OR REPLACE TABLE raw.play_events AS SELECT * FROM read_csv_auto('{(RAW_DIR/'play_events.csv').as_posix()}');")
     
     con.execute(f"CREAT OR REPLACE TABLE raw.search_events AS SELECT * FROM read_csv_auto('{(RAW_DIR/'search_events.csv').as_posix()}');")
+    
+    con.close()
 
     
     
-    expected = ["members", "titles", "play_events", "search_events"]
-    for name in expected:
-        fp = RAW_DIR / f"{name}.csv"
-        if not fp.exists():
-            raise FileNotFoundError(f"Expected {fp}. Generate data or add seed CSVs.")
-        con.execute(
-            f"CREATE OR REPLACE TABLE raw.{name} AS SELECT * FROM read_csv_auto('{fp.as_posix()}');"
-        )
-    con.close()
+ #   expected = ["members", "titles", "play_events", "search_events"]
+ #   for name in expected:
+ #       fp = RAW_DIR / f"{name}.csv"
+ #       if not fp.exists():
+ #           raise FileNotFoundError(f"Expected {fp}. Generate data or add seed CSVs.")
+ #       con.execute(
+ #           f"CREATE OR REPLACE TABLE raw.{name} AS SELECT * FROM read_csv_auto('{fp.as_posix()}');"
+ #       )
+ #   con.close()
 
 @task
 def dbt_build():
