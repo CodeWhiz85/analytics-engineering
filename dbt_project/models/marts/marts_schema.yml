@@ -4,20 +4,27 @@ models:
     columns:
       - name: member_id
         tests: [not_null, unique]
+        
   - name: dim_titles
     columns:
       - name: title_id
         tests: [not_null, unique]
+        
   - name: fct_plays
     columns:
       - name: minutes_watched
         tests:
           - not_null
+          
   - name: fct_member_day_engagement
     columns:
       - name: member_id
         tests: [not_null]
+          -name: member_id
+            tests: [not_null]
   - name: engagement_metrics
     columns:
       - name: event_date
         tests: [not_null]
+          -name: member_id
+            tests: [not_null]
